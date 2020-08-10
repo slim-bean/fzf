@@ -59,6 +59,21 @@ __fzf_history__() {
   fi
 }
 
+
+__fzf_history_logcli_local__() {
+  local output
+  output=$(
+    logcli query '{job="shell"}' --addr=http://localhost:4100 --limit=50000 --batch=5000 --since=720h -o raw --quiet |
+      FZF_DEFAULT_OPTS="--height ${FZF_TMUX_HEIGHT:-40%} $FZF_DEFAULT_OPTS -n2..,.. --tiebreak=index --bind=ctrl-r:toggle-sort $FZF_CTRL_R_OPTS +m " $(__fzfcmd) --query "$READLINE_LINE" 
+      ) || return
+  READLINE_LINE=${output#*$'\t'}
+  if [ -z "$READLINE_POINT" ]; then
+    echo "$READLINE_LINE"
+  else
+    READLINE_POINT=0x7fffffff
+  fi
+}
+
 # Required to refresh the prompt after fzf
 bind -m emacs-standard '"\er": redraw-current-line'
 
@@ -73,7 +88,7 @@ if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
   bind -m vi-insert '"\C-t": "\C-z\C-t\C-z"'
 
   # CTRL-R - Paste the selected command from history into the command line
-  bind -m emacs-standard '"\C-r": "\C-e \C-u\C-y\ey\C-u"$(__fzf_history__)"\e\C-e\er"'
+  bind -m emacs-standard '"\C-r": "\C-e \C-u\C-y\ey\C-u"$(__fzf_history_logcli_local__)"\e\C-e\er"'
   bind -m vi-command '"\C-r": "\C-z\C-r\C-z"'
   bind -m vi-insert '"\C-r": "\C-z\C-r\C-z"'
 else
@@ -83,9 +98,9 @@ else
   bind -m vi-insert -x '"\C-t": fzf-file-widget'
 
   # CTRL-R - Paste the selected command from history into the command line
-  bind -m emacs-standard -x '"\C-r": __fzf_history__'
-  bind -m vi-command -x '"\C-r": __fzf_history__'
-  bind -m vi-insert -x '"\C-r": __fzf_history__'
+  bind -m emacs-standard -x '"\C-r": __fzf_history_logcli_local__'
+  bind -m vi-command -x '"\C-r": __fzf_history_logcli_local__'
+  bind -m vi-insert -x '"\C-r": __fzf_history_logcli_local__'
 fi
 
 # ALT-C - cd into the selected directory
